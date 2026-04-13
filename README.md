@@ -36,16 +36,18 @@
 
 ## 📁 폴더 구조
 
+```
 ~/kiosk_project/
-├── kiosk_main.py          # 메인 실행 파일 (LLM API 클라이언트)
-├── README.md
-├── .gitignore
-├── llama.cpp/             # LLM 엔진 (CMake 빌드)
-│   └── models/
-│       └── qwen/
-│           └── qwen2.5-3b-instruct-q4_k_m.gguf  # ← .gitignore로 제외
-├── stt_engine/            # STT 모듈 (예정)
-└── tts_engine/            # TTS 모듈 (예정)
+|-- kiosk_main.py          # 메인 실행 파일 (LLM API 클라이언트)
+|-- README.md
+|-- .gitignore
+|-- llama.cpp/             # LLM 엔진 (CMake 빌드)
+|   |-- models/
+|       |-- qwen/
+|           |-- qwen2.5-3b-instruct-q4_k_m.gguf  # .gitignore로 제외
+|-- stt_engine/            # STT 모듈 (예정)
+|-- tts_engine/            # TTS 모듈 (예정)
+```
 
 ---
 
