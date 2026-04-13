@@ -13,11 +13,11 @@
 
 [사용자 음성 입력]
 ↓
-[STT] — Whisper (한국어)
+[STT] — Whisper small (한국어)
 ↓
 [LLM] — Qwen2.5-3B-Instruct (llama.cpp)
 ↓
-[TTS] — 음성 출력
+[TTS] — edge-tts (ko-KR-SunHiNeural)
 
 ---
 
@@ -38,129 +38,76 @@
 
 ```
 ~/kiosk_project/
-|-- kiosk_main.py          # 메인 실행 파일 (LLM API 클라이언트)
+|-- kiosk_main.py          # 메인 실행 파일 (STT+LLM+TTS 통합)
+|-- kiosk_main_backup.py   # 이전 버전 백업
 |-- README.md
 |-- .gitignore
 |-- llama.cpp/             # LLM 엔진 (CMake 빌드)
-|   |-- models/
-|       |-- qwen/
-|           |-- qwen2.5-3b-instruct-q4_k_m.gguf  # .gitignore로 제외
-|-- stt_engine/            # STT 모듈 (예정)
-|-- tts_engine/            # TTS 모듈 (예정)
+|   |-- build/bin/
+|   |   |-- llama-server   # 백그라운드 AI 서버
+|   |-- models/qwen/
+|       |-- qwen2.5-3b-instruct-q4_k_m.gguf  # .gitignore 제외
+|-- stt_engine/
+|   |-- stt.py             # Whisper STT + 다운샘플링
+|-- tts_engine/
+|-- tts.py             # edge-tts 음성 출력
 ```
 
 ---
 
-## ✅ 완료된 작업 (~ 2026.04.09)
+## ✅ 완료된 작업
 
-### 1. 초기 환경 세팅
-```bash
-uname -m          # aarch64 (64bit 확인)
-free -h           # 가용 RAM 7.3Gi 확인
-sudo apt install build-essential cmake git wget curl -y
-python3 -m venv kiosk_env
-source kiosk_env/bin/activate
-```
+### ~ 2026.04.09
+- llama.cpp CMake 빌드 완료
+- Qwen2.5-3B-Instruct-Q4_K_M 모델 구동 확인
+- llama-server 백그라운드 아키텍처 확정
+- TTFT/TPS 성능 측정 (TTFT 7~8초, TPS 5.8 t/s)
+- 다국어 환각(Hallucination) 방지 로직 구현
 
-### 2. llama.cpp 빌드 (CMake 방식)
-
-> ⚠️ 트러블슈팅: `make -j4` 방식은 최신 llama.cpp에서 폐기됨 → CMake로 전환
-
-```bash
-git clone https://github.com/ggerganov/llama.cpp
-cd llama.cpp
-cmake -B build
-cmake --build build --config Release -j4
-```
-
-빌드 결과물 위치: `./build/bin/llama-server`, `./build/bin/llama-cli`
-
-### 3. Qwen2.5-3B 모델 다운로드
-
-```bash
-mkdir -p models/qwen && cd models/qwen
-wget https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF/resolve/main/qwen2.5-3b-instruct-q4_k_m.gguf
-```
-
-- 모델 크기: 약 2.4GB (4비트 양자화 Q4_K_M)
-
-### 4. LLM 성능 측정 결과
-
-| 지표 | 결과 | 설명 |
-|---|---|---|
-| TTFT (첫 토큰 지연) | 평균 7~8초 | 첫 번째 질문 기준 |
-| TPS (생성 속도) | 평균 5.8 t/s | -j4 + Q4_K_M 최적화 |
-| Total Latency (예상) | 10~13초 | STT 2~3초 + TTFT 7~8초 + TTS 1~2초 |
-
-> 💡 두 번째 질문부터 TTFT 1~2초로 급감 → KV 캐싱 효과 확인
-
-### 5. 아키텍처 결정: llama-server 백그라운드 상시 실행
-
-```bash
-# llama-server 실행 (백그라운드)
-cd ~/kiosk_project/llama.cpp
-./build/bin/llama-server \
-  -m models/qwen/qwen2.5-3b-instruct-q4_k_m.gguf \
-  -c 2048 -n 256 -t 4 \
-  --host 127.0.0.1 --port 8080 \
-  --log-disable &
-```
-
-기존 `llama-cli` 방식 대비 장점:
-- 모델·KV Cache를 RAM에 상주 → 매번 로딩 불필요
-- AI 연산과 UI/음성 프로세스 완전 분리
-- `localhost:8080` HTTP API로 Python에서 호출
+### ~ 2026.04.13
+- Asul RPI Voice HAT WM8960 드라이버 설치
+- STT 엔진 구현 (Whisper small, 48000Hz→16000Hz 다운샘플링)
+- TTS 엔진 구현 (edge-tts ko-KR-SunHiNeural)
+- STT → LLM → TTS 전체 파이프라인 통합 완료
+- LLM 응답 시간 2~4초 확인
 
 ---
 
-## 🐛 발견된 문제 및 트러블슈팅
+## ✅ 완료된 작업
+
+### ~ 2026.04.09
+- llama.cpp CMake 빌드 완료
+- Qwen2.5-3B-Instruct-Q4_K_M 모델 구동 확인
+- llama-server 백그라운드 아키텍처 확정
+- TTFT/TPS 성능 측정 (TTFT 7~8초, TPS 5.8 t/s)
+- 다국어 환각(Hallucination) 방지 로직 구현
+
+### ~ 2026.04.13
+- Asul RPI Voice HAT WM8960 드라이버 설치
+- STT 엔진 구현 (Whisper small, 48000Hz→16000Hz 다운샘플링)
+- TTS 엔진 구현 (edge-tts ko-KR-SunHiNeural)
+- STT → LLM → TTS 전체 파이프라인 통합 완료
+- LLM 응답 시간 2~4초 확인
+
+---
+
+## 🐛 트러블슈팅
 
 ### 문제 1 — make -j4 빌드 실패
-- **원인**: llama.cpp가 CMake 방식으로 전환됨
+- **원인**: llama.cpp가 CMake 방식으로 전환
 - **해결**: `cmake -B build && cmake --build build --config Release -j4`
 
 ### 문제 2 — `-c 512` 설정으로 대화 중 강제 종료
-- **원인**: 시스템 프롬프트 + 대화 기록이 512 토큰을 빠르게 채움
+- **원인**: 시스템 프롬프트 + 대화 기록이 512 토큰 초과
 - **해결**: `-c 2048`로 증가
 
-### ⚠️ 문제 3 — 다국어 환각(Hallucination): 대화 지속 시 중국어·일본어로 응답
+### ⚠️ 문제 3 — 다국어 환각(Hallucination)
+- **원인**: Qwen 중국어 기반 모델 → 컨텍스트 길어지면 중국어 회귀
+- **해결**: 시스템 프롬프트 이중 강화 + temperature=0.3 + 한글 감지 안전장치 + 히스토리 12개 제한
 
-**가장 중요한 이슈.** Qwen은 원래 중국어 기반 모델이라,
-컨텍스트가 길어지면 중국어/일본어로 응답이 회귀하는 현상 발생.
-
-**발생 조건:**
-- 동일 세션에서 대화 4~5턴 이상 지속
-- 컨텍스트 윈도우가 절반 이상 채워졌을 때
-
-**해결 방법 (현재 `kiosk_main.py`에 반영):**
-
-1. **시스템 프롬프트 이중 강화**: 한국어 명시를 영문+한글 동시 작성
-```python
-    "You must respond ONLY in Korean language. Never use Chinese or Japanese."
-    "반드시 한국어로만 대답해주세요."
-```
-
-2. **온도(temperature) 낮춤**: `0.3` 설정으로 창의적 변형 억제
-
-3. **max_tokens 제한**: `100` 토큰으로 응답 길이 제한 → 불필요한 언어 전환 방지
-
-4. **한국어 감지 안전장치**: 응답에 한글(가-힣)이 없으면 재질문 유도
-```python
-    if not any('\uAC00' <= ch <= '\uD7A3' for ch in reply):
-        return "죄송합니다, 다시 한번 말씀해 주시겠어요?"
-```
-
-5. **컨텍스트 히스토리 제한**: 최근 6턴만 유지하여 컨텍스트 오염 방지
-
----
-
-## 🔜 다음 작업 예정
-
-- [ ] Asul RPI Voice HAT WM8960 드라이버 설치 및 마이크/스피커 세팅
-- [ ] STT 연결: Whisper `small` 모델 (한국어)
-- [ ] TTS 연결: edge-tts `ko-KR-SunHiNeural`
-- [ ] 전체 파이프라인 통합 (STT → LLM → TTS)
-- [ ] 스플래시 스크린 (Time Masking) 구현
+### 문제 4 — PaErrorCode -9997 (Invalid sample rate)
+- **원인**: WM8960 하드웨어(48000Hz) vs Whisper 요구(16000Hz) 불일치
+- **해결**: 48000Hz 녹음 후 `[::3]` 슬라이싱으로 16000Hz 다운샘플링
 
 ---
 
@@ -178,18 +125,30 @@ cd ~/kiosk_project/llama.cpp
   --host 127.0.0.1 --port 8080 \
   --log-disable &
 
-# 3. 서버 대기
-sleep 10
-
-# 4. 메인 실행 (텍스트 모드)
+# 3. 텍스트 모드 테스트
 cd ~/kiosk_project
-python kiosk_main.py
+python kiosk_main.py text
+
+# 4. 음성 모드 실행
+python kiosk_main.py voice
 ```
+
+---
+
+## 🔜 다음 작업 예정
+
+- [ ] VAD 적용 (webrtcvad) — 고정 5초 녹음 → 자동 발화 감지
+- [ ] 백엔드 EC2 API 연결 — CIST 설문 JSON 연동
+- [ ] 스플래시 스크린 (Time Masking) 구현
 
 ---
 
 ## 🔧 의존성
 
 ```bash
-pip install requests langdetect
+# 시스템 패키지
+sudo apt install -y portaudio19-dev python3-pyaudio ffmpeg mpg123
+
+# Python 패키지
+pip install openai-whisper sounddevice numpy pyaudio requests edge-tts
 ```
