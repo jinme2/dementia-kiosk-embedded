@@ -10,7 +10,7 @@
 **음성으로 질문하면 AI가 힌트를 제공하는** 온디바이스 AI 파이프라인.
 모든 AI 연산은 클라우드 없이 Raspberry Pi 5 단독으로 처리.
 
-
+```
 [사용자 음성 입력]
 ↓
 [STT] — Whisper small (한국어)
@@ -18,6 +18,7 @@
 [LLM] — Qwen2.5-3B-Instruct (llama.cpp)
 ↓
 [TTS] — edge-tts (ko-KR-SunHiNeural)
+```
 
 ---
 
@@ -52,24 +53,6 @@
 |-- tts_engine/
 |-- tts.py             # edge-tts 음성 출력
 ```
-
----
-
-## ✅ 완료된 작업
-
-### ~ 2026.04.09
-- llama.cpp CMake 빌드 완료
-- Qwen2.5-3B-Instruct-Q4_K_M 모델 구동 확인
-- llama-server 백그라운드 아키텍처 확정
-- TTFT/TPS 성능 측정 (TTFT 7~8초, TPS 5.8 t/s)
-- 다국어 환각(Hallucination) 방지 로직 구현
-
-### ~ 2026.04.13
-- Asul RPI Voice HAT WM8960 드라이버 설치
-- STT 엔진 구현 (Whisper small, 48000Hz→16000Hz 다운샘플링)
-- TTS 엔진 구현 (edge-tts ko-KR-SunHiNeural)
-- STT → LLM → TTS 전체 파이프라인 통합 완료
-- LLM 응답 시간 2~4초 확인
 
 ---
 
