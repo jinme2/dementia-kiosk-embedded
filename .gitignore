@@ -1,0 +1,27 @@
+# 모델 파일 (용량 수GB → 절대 올리지 않음)
+*.gguf
+*.bin
+*.pt
+*.safetensors
+
+# llama.cpp 빌드 결과물
+llama.cpp/build/
+llama.cpp/.cache/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+kiosk_env/
+.venv/
+*.egg-info/
+
+# 시스템
+.DS_Store
+*.log
+*.tmp
+/tmp/
+
+# 오디오 테스트 파일
+*.wav
+*.mp3
