@@ -13,11 +13,13 @@
 ```
 [사용자 음성 입력]
 ↓
-[STT] — Whisper small (한국어)
+[STT] — Whisper small (localhost:8081)
 ↓
-[LLM] — Qwen2.5-3B-Instruct (llama.cpp)
+[LLM] — Qwen2.5-3B-Instruct (localhost:8080)
 ↓
 [TTS] — edge-tts (ko-KR-SunHiNeural)
+↓
+[음성 출력 (wm8960 HAT)]
 ```
 
 ---
@@ -30,7 +32,8 @@
 | CPU | 64-bit Quad-core (ARM Cortex-A76) |
 | RAM | 8GB SDRAM |
 | 스토리지 | Micro SD 128GB |
-| 오디오 모듈 | Asul RPI Voice HAT (WM8960, MEMS 마이크 2개 내장) |
+| 오디오 출력 | Asul RPI Voice HAT (WM8960, card 2) |
+| 마이크 입력 | USB PnP Sound Device (card 3, 44100Hz) |
 | 접속 방식 | SSH Headless |
 
 ---
@@ -45,11 +48,12 @@
 |-- .gitignore
 |-- llama.cpp/             # LLM 엔진 (CMake 빌드)
 |   |-- build/bin/
-|   |   |-- llama-server   # 백그라운드 AI 서버
+|   |   |-- llama-server   # 백그라운드 LLM 서버 (port 8080)
 |   |-- models/qwen/
 |       |-- qwen2.5-3b-instruct-q4_k_m.gguf  # .gitignore 제외
 |-- stt_engine/
-|   |-- stt.py             # Whisper STT + 다운샘플링
+|   |-- stt_server.py      # Whisper 백그라운드 서버 (port 8081)
+|   |-- stt.py             # STT HTTP 클라이언트
 |-- tts_engine/
 |-- tts.py             # edge-tts 음성 출력
 ```
@@ -72,6 +76,15 @@
 - STT → LLM → TTS 전체 파이프라인 통합 완료
 - LLM 응답 시간 2~4초 확인
 
+### ~ 2026.04.18
+- STT 서버 분리 (Whisper Flask 서버, port 8081)
+- 실행 속도 개선: 30~60초 → 2~3초
+- USB 마이크 추가 연결 (card 3, 44100Hz)
+- ALSA 입출력 분리 (.asoundrc)
+  - 입력: USB 마이크 (hw:3,0)
+  - 출력: wm8960 HAT (hw:2,0)
+- scipy.signal.resample로 44100→16000Hz 정확 변환
+
 ---
 
 ## 🐛 트러블슈팅
@@ -80,17 +93,21 @@
 - **원인**: llama.cpp가 CMake 방식으로 전환
 - **해결**: `cmake -B build && cmake --build build --config Release -j4`
 
-### 문제 2 — `-c 512` 설정으로 대화 중 강제 종료
-- **원인**: 시스템 프롬프트 + 대화 기록이 512 토큰 초과
-- **해결**: `-c 2048`로 증가
-
-### ⚠️ 문제 3 — 다국어 환각(Hallucination)
+### 문제 2 — 다국어 환각(Hallucination)
 - **원인**: Qwen 중국어 기반 모델 → 컨텍스트 길어지면 중국어 회귀
-- **해결**: 시스템 프롬프트 이중 강화 + temperature=0.3 + 한글 감지 안전장치 + 히스토리 12개 제한
+- **해결**: 시스템 프롬프트 이중 강화 + temperature=0.3 + 한글 감지 안전장치
 
-### 문제 4 — PaErrorCode -9997 (Invalid sample rate)
-- **원인**: WM8960 하드웨어(48000Hz) vs Whisper 요구(16000Hz) 불일치
-- **해결**: 48000Hz 녹음 후 `[::3]` 슬라이싱으로 16000Hz 다운샘플링
+### 문제 3 — PaErrorCode -9997 (Invalid sample rate)
+- **원인**: WM8960(48000Hz) vs Whisper(16000Hz) 불일치
+- **해결**: [::3] 다운샘플링 → scipy.signal.resample로 정확 변환
+
+### 문제 4 — Device or resource busy (장치 충돌)
+- **원인**: STT(USB 마이크)와 TTS(wm8960)가 ALSA default 장치 충돌
+- **해결**: ~/.asoundrc에서 입출력 장치 명시적 분리
+
+### ⚠️ Known Issue — 공공장소 소음 수음
+- **원인**: USB 마이크 무지향성 + 쿨링팬 소음 + 주변 환경 소음
+- **해결 예정**: VAD(webrtcvad) 적용으로 음성 구간만 STT 처리
 
 ---
 
@@ -100,7 +117,7 @@
 # 1. 가상환경 활성화
 source ~/kiosk_env/bin/activate
 
-# 2. llama-server 백그라운드 실행
+# 2. LLM 서버 실행 (터미널 1)
 cd ~/kiosk_project/llama.cpp
 ./build/bin/llama-server \
   -m models/qwen/qwen2.5-3b-instruct-q4_k_m.gguf \
@@ -108,11 +125,11 @@ cd ~/kiosk_project/llama.cpp
   --host 127.0.0.1 --port 8080 \
   --log-disable &
 
-# 3. 텍스트 모드 테스트
-cd ~/kiosk_project
-python kiosk_main.py text
+# 3. STT 서버 실행 (터미널 2)
+python ~/kiosk_project/stt_engine/stt_server.py
 
-# 4. 음성 모드 실행
+# 4. 메인 실행 (터미널 3)
+cd ~/kiosk_project
 python kiosk_main.py voice
 ```
 
@@ -120,14 +137,14 @@ python kiosk_main.py voice
 
 ## 🔜 다음 작업 예정
 
-- [ ] VAD 적용 (webrtcvad) — 고정 5초 녹음 → 자동 발화 감지
+- [ ] VAD 적용 (webrtcvad) — 소음 환경 음성 감지
+- [ ] 전체 파이프라인 재통합 테스트
 - [ ] 백엔드 EC2 API 연결 — CIST 설문 JSON 연동
 - [ ] 스플래시 스크린 (Time Masking) 구현
 
 ---
 
 ## 🔧 의존성
-
 ```bash
 # 시스템 패키지
 sudo apt install -y portaudio19-dev python3-pyaudio ffmpeg mpg123
