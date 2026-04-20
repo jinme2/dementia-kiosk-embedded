@@ -44,6 +44,8 @@
 ~/kiosk_project/
 |-- kiosk_main.py          # 메인 실행 파일 (STT+LLM+TTS 통합)
 |-- kiosk_main_backup.py   # 이전 버전 백업
+|-- cist_runner.py         # CIST 설문 진행 메인 로직 (신규)
+|-- cist_questions.json    # CIST 문항 로컬 데이터 (신규)
 |-- README.md
 |-- .gitignore
 |-- llama.cpp/             # LLM 엔진 (CMake 빌드)
@@ -55,7 +57,7 @@
 |   |-- stt_server.py      # Whisper 백그라운드 서버 (port 8081)
 |   |-- stt.py             # STT HTTP 클라이언트
 |-- tts_engine/
-|-- tts.py             # edge-tts 음성 출력
+    |-- tts.py             # edge-tts 음성 출력
 ```
 
 ---
@@ -85,6 +87,13 @@
   - 출력: wm8960 HAT (hw:2,0)
 - scipy.signal.resample로 44100→16000Hz 정확 변환
 
+### ~ 2026.04.20
+- HAT 마이크 .asoundrc 충돌 해결 및 인식률 복구
+- CIST JSON API 구조 분석 (19문항, 6영역, 30점)
+- cist_runner.py 구현 (TTS+STT+LLM 힌트 통합)
+  - 문항 타입별 처리 (음성/그림/기억등록/유창성)
+  - 백엔드 실패 시 로컬 JSON 폴백
+  - 모르겠다 감지 → LLM 힌트 제공
 ---
 
 ## 🐛 트러블슈팅
@@ -138,9 +147,9 @@ python kiosk_main.py voice
 ## 🔜 다음 작업 예정
 
 - [ ] VAD 적용 (webrtcvad) — 소음 환경 음성 감지
-- [ ] 전체 파이프라인 재통합 테스트
-- [ ] 백엔드 EC2 API 연결 — CIST 설문 JSON 연동
-- [ ] 스플래시 스크린 (Time Masking) 구현
+- [ ] EC2 주소 확정 후 POST /cist/submit 백엔드 연동
+- [ ] 그림 문항 화면 표시 (터치스크린 연동)
+- [ ] 전체 CIST 파이프라인 실제 동작 테스트
 
 ---
 

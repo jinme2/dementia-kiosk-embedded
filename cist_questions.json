@@ -1,0 +1,259 @@
+{
+  "test_name": "인지선별검사 (CIST)",
+  "test_full_name": "Cognitive Impairment Screening Test",
+  "total_questions": 19,
+  "total_max_score": 30,
+  "domains": [
+    "지남력",
+    "주의력",
+    "시공간기능",
+    "집행기능",
+    "기억력",
+    "언어기능"
+  ],
+  "domain_max_scores": {
+    "지남력": 5,
+    "주의력": 3,
+    "시공간기능": 2,
+    "집행기능": 6,
+    "기억력": 10,
+    "언어기능": 4
+  },
+  "questions": [
+    {
+      "question_number": 1,
+      "sub_number": "(1)",
+      "domain": "지남력",
+      "sub_domain": "시간",
+      "question_text": "올해는 몇 년도입니까?",
+      "instruction": "오늘 날짜를 말씀해주세요.",
+      "max_score": 1,
+      "options": null,
+      "scoring_note": "정확한 연도를 맞추면 1점"
+    },
+    {
+      "question_number": 1,
+      "sub_number": "(2)",
+      "domain": "지남력",
+      "sub_domain": "시간",
+      "question_text": "지금은 몇 월입니까?",
+      "instruction": null,
+      "max_score": 1,
+      "options": null,
+      "scoring_note": "정확한 월을 맞추면 1점"
+    },
+    {
+      "question_number": 1,
+      "sub_number": "(3)",
+      "domain": "지남력",
+      "sub_domain": "시간",
+      "question_text": "오늘은 며칠입니까?",
+      "instruction": null,
+      "max_score": 1,
+      "options": null,
+      "scoring_note": "정확한 일을 맞추면 1점"
+    },
+    {
+      "question_number": 1,
+      "sub_number": "(4)",
+      "domain": "지남력",
+      "sub_domain": "시간",
+      "question_text": "오늘은 무슨 요일입니까?",
+      "instruction": null,
+      "max_score": 1,
+      "options": null,
+      "scoring_note": "정확한 요일을 맞추면 1점"
+    },
+    {
+      "question_number": 2,
+      "sub_number": null,
+      "domain": "지남력",
+      "sub_domain": "장소",
+      "question_text": "지금 님이 계신 여기는 어디인가요? 이 장소가 어디인지 말씀해주세요.",
+      "instruction": null,
+      "max_score": 1,
+      "options": null,
+      "scoring_note": "현재 장소를 정확히 말하면 1점"
+    },
+    {
+      "question_number": 3,
+      "sub_number": null,
+      "domain": "기억력",
+      "sub_domain": "기억등록",
+      "question_text": "지금부터 외우셔야 하는 문장 하나를 불러드리겠습니다. 끝까지 잘 듣고 따라 해 보세요.",
+      "instruction": "(1차 시행) 민수는 / 자전거를 타고 / 공원에 가서 / 11시부터 / 야구를 했다\n잘 하셨습니다. 제가 다시 한번 불러드리겠습니다.\n(2차 시행) 민수는 / 자전거를 타고 / 공원에 가서 / 11시부터 / 야구를 했다\n제가 이 문장을 나중에 여쭤보겠습니다. 잘 기억하세요.",
+      "max_score": 0,
+      "options": null,
+      "scoring_note": "점수 없음. 순서 상관없이 대상자가 말한 단어에 ○표. 나중에 회상/재인에서 채점."
+    },
+    {
+      "question_number": 4,
+      "sub_number": "(1)",
+      "domain": "주의력",
+      "sub_domain": "숫자 바로 따라 말하기",
+      "question_text": "제가 불러드리는 숫자를 그대로 따라 해 주세요: 6 – 9 – 7 – 3",
+      "instruction": "대상자가 잘 이해하지 못하는 경우: 제가 1-2-3 하고 부르면, 똑같이 1-2-3 이렇게 말씀해 주세요.",
+      "max_score": 1,
+      "options": null,
+      "scoring_note": "4개 숫자를 순서대로 정확히 따라 말하면 1점"
+    },
+    {
+      "question_number": 4,
+      "sub_number": "(2)",
+      "domain": "주의력",
+      "sub_domain": "숫자 바로 따라 말하기",
+      "question_text": "제가 불러드리는 숫자를 그대로 따라 해 주세요: 5 – 7 – 2 – 8 – 4",
+      "instruction": null,
+      "max_score": 1,
+      "options": null,
+      "scoring_note": "5개 숫자를 순서대로 정확히 따라 말하면 1점"
+    },
+    {
+      "question_number": 5,
+      "sub_number": null,
+      "domain": "주의력",
+      "sub_domain": "거꾸로 말하기",
+      "question_text": "제가 불러드리는 말을 끝에서부터 거꾸로 따라 해 주세요: 금수강산",
+      "instruction": "대상자가 잘 이해하지 못하는 경우: OOO님 이름을 거꾸로 하면 OOO 이렇게 되지요? 마찬가지로 제가 부르는 말을 거꾸로 말씀해 주세요.",
+      "max_score": 1,
+      "options": null,
+      "scoring_note": "'금수강산'을 거꾸로 '산강수금'이라 말하면 1점"
+    },
+    {
+      "question_number": 6,
+      "sub_number": null,
+      "domain": "시공간기능",
+      "sub_domain": "도형 모사",
+      "question_text": "여기 점을 연결하여 그린 그림이 있습니다. 이 그림과 똑같이 되도록 같은 위치에 그려보세요. 점을 연결해서 그리시면 됩니다.",
+      "instruction": "그림1을 가리키며 제시",
+      "max_score": 2,
+      "options": null,
+      "scoring_note": "0점: 부정확, 1점: 부분 정확, 2점: 정확하게 모사"
+    },
+    {
+      "question_number": 7,
+      "sub_number": null,
+      "domain": "집행기능",
+      "sub_domain": "시각추론1",
+      "question_text": "여기 모양들이 정해진 순서로 나옵니다. 네모, 동그라미, 세모, 네모, 빈칸, 세모. 빈칸에는 무엇이 들어가야 할까요?",
+      "instruction": "그림2를 가리키며 도형을 왼쪽부터 하나씩 가리킴",
+      "max_score": 1,
+      "options": null,
+      "scoring_note": "패턴을 파악하여 '동그라미'를 맞추면 1점"
+    },
+    {
+      "question_number": 8,
+      "sub_number": null,
+      "domain": "집행기능",
+      "sub_domain": "시각추론2",
+      "question_text": "여기 네 칸 중의 한 칸에 별이 하나 있습니다. 별이 이렇게 다른 위치로 이동합니다. 어떤 식으로 이동하는지 잘 생각해 보십시오. 여기서는 네 칸 중에 별이 어디에 위치하게 될까요?",
+      "instruction": "그림3을 가리키며 별의 이동 패턴 설명",
+      "max_score": 1,
+      "options": null,
+      "scoring_note": "별의 이동 패턴을 파악하여 정확한 위치를 가리키면 1점"
+    },
+    {
+      "question_number": 9,
+      "sub_number": null,
+      "domain": "집행기능",
+      "sub_domain": "언어추론",
+      "question_text": "카드에 숫자와 계절이 하나씩 적혀 있습니다. '1-봄-2-여름~' 이렇게 연결되어 나갑니다. 여기는 무엇이 들어갈 차례일까요?",
+      "instruction": "그림4를 가리키며 화살표 시된 빈칸을 가리킴",
+      "max_score": 2,
+      "options": null,
+      "scoring_note": "0점: 오답, 1점: 부분 정답, 2점: 완전 정답"
+    },
+    {
+      "question_number": 10,
+      "sub_number": null,
+      "domain": "기억력",
+      "sub_domain": "기억회상/재인",
+      "question_text": "제가 조금 전에 외우라고 불러드렸던 문장을 다시 한번 말씀해 주세요.",
+      "instruction": "조금 전에 외우라고 불러드렸던 문장(한 문장의 이야기)을 말씀해 보세요.",
+      "max_score": 10,
+      "options": [
+        {
+          "label": "민수",
+          "value": "민수",
+          "is_correct": true
+        },
+        {
+          "label": "자전거",
+          "value": "자전거",
+          "is_correct": true
+        },
+        {
+          "label": "공원",
+          "value": "공원",
+          "is_correct": true
+        },
+        {
+          "label": "11시",
+          "value": "11시",
+          "is_correct": true
+        },
+        {
+          "label": "야구",
+          "value": "야구",
+          "is_correct": true
+        }
+      ],
+      "scoring_note": "5개 항목 각각에 대해:\n- 기억회상 성공 시: 2점 (재인 불필요)\n- 기억회상 실패 시 → 재인 시행 → 재인 성공 시: 1점\n- 기억회상 실패 + 재인 실패: 0점\n최대 10점 (5항목 × 2점)"
+    },
+    {
+      "question_number": 11,
+      "sub_number": "(1)",
+      "domain": "언어기능",
+      "sub_domain": "이름대기",
+      "question_text": "여기 있는 이 그림의 이름을 말씀해 주세요. 이것은 무엇입니까?",
+      "instruction": "그림5의 첫 번째 그림을 가리킴",
+      "max_score": 1,
+      "options": null,
+      "scoring_note": "'칫솔'을 정확히 말하면 1점"
+    },
+    {
+      "question_number": 11,
+      "sub_number": "(2)",
+      "domain": "언어기능",
+      "sub_domain": "이름대기",
+      "question_text": "여기 있는 이 그림의 이름을 말씀해 주세요. 이것은 무엇입니까?",
+      "instruction": "그림5의 두 번째 그림을 가리킴",
+      "max_score": 1,
+      "options": null,
+      "scoring_note": "'그네'를 정확히 말하면 1점"
+    },
+    {
+      "question_number": 11,
+      "sub_number": "(3)",
+      "domain": "언어기능",
+      "sub_domain": "이름대기",
+      "question_text": "여기 있는 이 그림의 이름을 말씀해 주세요. 이것은 무엇입니까?",
+      "instruction": "그림5의 세 번째 그림을 가리킴",
+      "max_score": 1,
+      "options": null,
+      "scoring_note": "'주사위'를 정확히 말하면 1점"
+    },
+    {
+      "question_number": 12,
+      "sub_number": null,
+      "domain": "언어기능",
+      "sub_domain": "이해력",
+      "question_text": "제가 말씀드리는 대로 행동으로 그대로 보여주십시오. 박수를 두 번 치고, 주먹을 쥐세요.",
+      "instruction": null,
+      "max_score": 1,
+      "options": null,
+      "scoring_note": "박수 2번 + 주먹 쥐기를 정확히 수행하면 1점"
+    },
+    {
+      "question_number": 13,
+      "sub_number": null,
+      "domain": "집행기능",
+      "sub_domain": "유창성",
+      "question_text": "지금부터 제가 그만이라고 말할 때까지 과일이나 채소를 최대한 많이 이야기해 주세요.",
+      "instruction": "준비되셨지요? 자, 과일이나 채소 이름을 말씀해 주세요. 시작! (제한시간 1분)",
+      "max_score": 2,
+      "options": null,
+      "scoring_note": "0~8개: 0점 / 9~14개: 1점 / 15개 이상: 2점"
+    }
+  ]
+}
