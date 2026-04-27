@@ -17,3 +17,19 @@ def listen(duration: int = 5) -> str:
     except Exception as e:
         print(f"[STT] 서버 연결 실패: {e}", flush=True)
         return ""
+
+def listen_until_silence(duration=60, silence_sec=4) -> str:
+    """4초 침묵 or 엔터로 종료되는 STT"""
+    print(f"[STT] 🎙️ 말씀하세요... (4초 침묵으로 자동 종료)", flush=True)
+    try:
+        resp = requests.post(
+            "http://127.0.0.1:8081/listen_until_silence",
+            json={"duration": duration, "silence_sec": silence_sec},
+            timeout=duration + 10
+        )
+        text = resp.json().get("text", "")
+        print(f"[STT] 인식 결과: '{text}'", flush=True)
+        return text
+    except Exception as e:
+        print(f"[STT] 서버 연결 실패: {e}", flush=True)
+        return ""

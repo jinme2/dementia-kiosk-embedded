@@ -66,79 +66,101 @@ def ask_llm_hint(question_text: str, user_answer: str) -> str:
     except:
         return "천천히 생각해보세요."
 
-
 def conduct_question(q: dict) -> dict:
-    """
-    문항 하나를 진행하고 결과 반환
-    반환값: {"question_number": N, "sub_number": X, "answer": "...", "score": N}
-    """
     q_num = q["question_number"]
     sub   = q.get("sub_number") or ""
     text  = q["question_text"]
     instr = q.get("instruction") or ""
-    max_s = q["max_score"]
+    options = q.get("options")
 
     print(f"\n[CIST] Q{q_num}{sub} ({q['domain']} - {q['sub_domain']})")
 
     # 1. 문항 음성 출력
     speak(text)
 
-    # 그림 필요한 문항 안내
-    if q_num in VISUAL_QUESTIONS:
-        speak("화면을 보시고 답변해 주세요.")
-
-    # 기억 등록 문항 (읽어주기만, 점수 없음)
+    # 기억 등록 문항 (Q3)
     if q_num in NO_SCORE_QUESTIONS:
-        if instr:
-            # instruction을 단계별로 읽어주기
-            for line in instr.split("\n"):
-                line = line.strip()
-                if line and not line.startswith("#"):
-                    speak(line)
-                    time.sleep(0.5)
+        from stt_engine.stt import listen_until_silence
+
+        speak("1차 시행입니다. 민수는, 자전거를 타고, 공원에 가서, 11시부터, 야구를 했다")
+        time.sleep(1.5)  # TTS 잔향 대기
+        listen_until_silence(duration=30, silence_sec=4)
+
+        speak("잘 하셨습니다. 다시 한번 불러드리겠습니다.")
+        speak("2차 시행입니다. 민수는, 자전거를 타고, 공원에 가서, 11시부터, 야구를 했다")
+        time.sleep(1.5)  # TTS 잔향 대기
+        listen_until_silence(duration=30, silence_sec=4)
+
+        speak("제가 이 문장을 나중에 여쭤보겠습니다. 잘 기억하세요.")
         return {"question_number": q_num, "sub_number": sub,
                 "answer": "기억등록완료", "score": 0}
+    # 객관식 문항 → TTS만, 터치로 선택
+    if options:
+        speak("화면에서 선택해 주세요.")
+        return {"question_number": q_num, "sub_number": sub,
+                "answer": "터치입력대기", "score": -1}
 
-    # 1분 제한 문항 (유창성)
+    # 그림 문항 → TTS만 + 엔터 대기
+    if q_num in VISUAL_QUESTIONS:
+        speak("화면을 보시고 답변해 주세요. 완료하시면 확인 버튼을 눌러주세요.")
+        input(">>> 완료되면 엔터: ")
+        return {"question_number": q_num, "sub_number": sub,
+                "answer": "시각문항", "score": -1}
+
+    # 객관식 문항 → TTS만 + 엔터 대기
+    if options:
+        speak("화면에서 선택해 주세요. 완료하시면 확인 버튼을 눌러주세요.")
+        input(">>> 완료되면 엔터: ")
+        return {"question_number": q_num, "sub_number": sub,
+                "answer": "터치입력대기", "score": -1}
+
+    # 행동 문항 (Q12) → TTS만 + 엔터 대기
+    if q_num == 12:
+        speak("행동으로 보여주세요. 완료하시면 확인 버튼을 눌러주세요.")
+        input(">>> 완료되면 엔터: ")
+        return {"question_number": q_num, "sub_number": sub,
+                "answer": "행동확인", "score": -1}
+
+    # 1분 제한 문항 (Q13 유창성)
     if q_num in TIMED_QUESTIONS:
+        from stt_engine.stt import listen_until_silence
         speak("지금부터 시작합니다.")
-        answers = []
-        start = time.time()
-        limit = TIMED_QUESTIONS[q_num]
-        while time.time() - start < limit:
-            remaining = int(limit - (time.time() - start))
-            ans = listen(duration=5)
-            if ans.strip():
-                answers.append(ans.strip())
-            if remaining <= 10:
-                speak("10초 남았습니다.")
-                break
+
+        # 60초 동안 말하기, 4초 침묵하면 자동 종료
+        answer_text = listen_until_silence(duration=60, silence_sec=4)
+
         speak("그만.")
-        answer_text = ", ".join(answers)
-        count = len(answer_text.split(",")) if answer_text else 0
+
+        # 단어 개수 세기
+        words = [w for w in answer_text.split() if w]
+        count = len(words)
+        print(f"[CIST] 유창성 단어 수: {count}개 → {answer_text}")
         score = 0 if count <= 8 else (1 if count <= 14 else 2)
+
         return {"question_number": q_num, "sub_number": sub,
                 "answer": answer_text, "score": score}
 
-    # 2. 음성 응답 받기 (일반 문항)
+    # 주관식 문항 → STT로 음성 응답
     speak("말씀해 주세요.")
-    user_answer = listen(duration=7)
+    time.sleep(1.0)  # TTS 잔향 대기
+    user_answer = listen(duration=15)
     print(f"[CIST] 어르신 답변: '{user_answer}'")
 
-    # 3. 모르겠다 / 빈 응답 처리
+    # 모르겠다 / 빈 응답 → LLM 힌트
     if not user_answer.strip() or any(
         w in user_answer for w in ["모르", "몰라", "모르겠", "잘 모르"]
     ):
         hint = ask_llm_hint(text, user_answer)
         speak(hint)
         speak("다시 한번 말씀해 주세요.")
-        user_answer = listen(duration=7)
+        time.sleep(1.0)  # 여기도 추가
+        user_answer = listen(duration=15)
 
     return {
         "question_number": q_num,
         "sub_number": sub,
         "answer": user_answer,
-        "score": -1  # 서버에서 채점
+        "score": -1
     }
 
 
