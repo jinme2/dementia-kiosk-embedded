@@ -4,28 +4,72 @@
 
 ---
 
-## 📋 프로젝트 개요
+## 📖 About
 
-어르신이 CIST(인지선별검사) 설문 중 어려운 문항을 만났을 때,
-**음성으로 질문하면 AI가 힌트를 제공하는** 온디바이스 AI 파이프라인.
-모든 AI 연산은 클라우드 없이 Raspberry Pi 5 단독으로 처리.
+치매 조기 발견을 위한 온디바이스 AI 키오스크 프로젝트.
+보건소 또는 지하철역 등 공공장소에 설치하여 어르신이 대기 시간 중
+CIST(인지선별검사)를 음성으로 진행할 수 있도록 돕는 시스템.
+모든 AI 연산(STT, LLM, TTS)은 클라우드 없이 Raspberry Pi 5 단독으로 처리하며,
+검사 결과는 AWS 백엔드로 전송 후 치매안심센터 예약까지 연결된다.
+
+---
+
+## 🏗️ 시스템 아키텍처
+
+### 음성 AI 파이프라인
 
 ```
 [사용자 음성 입력]
-↓
-[STT] — Whisper small (localhost:8081)
-↓
-[LLM] — Qwen2.5-3B-Instruct (localhost:8080)
-↓
-[TTS] — edge-tts (ko-KR-SunHiNeural)
-↓
-[음성 출력 (wm8960 HAT)]
+        ↓
+     [STT] — Whisper small (localhost:8081)
+        ↓
+     [LLM] — Qwen2.5-3B-Instruct (localhost:8080)
+        ↓
+     [TTS] — edge-tts (ko-KR-SunHiNeural, localhost:8082)
+        ↓
+  [음성 출력 (JBL 블루투스 / wm8960 HAT)]
 ```
 
+### 전체 시스템 구성
+
+```
+[Raspberry Pi 5]
+        │
+        ├── [터치 모니터 15.6"] ── Chromium 키오스크
+        │         │
+        │    [start.html] ──→ [index.html] ──→ [face_main.py]
+        │         │                │                  │
+        │    TTS 안내음성      CIST 설문 진행      표정 분석
+        │
+        ├── [wm8960 HAT]
+        │    ├── MEMS 마이크 (STT 입력)
+        │    └── 스피커 출력
+        │
+        ├── [JBL Bluetooth] ── TTS 음성 출력
+        │
+        └── [RPi Camera Module imx219]
+                  │
+            MediaPipe 얼굴 분석
+            (표정 변화 점수, 무표정 감지)
+
+[서버 포트 구성]
+  8080 → llama-server    (LLM 추론)
+  8081 → stt_server.py   (Whisper STT)
+  8082 → tts_server.py   (edge-tts TTS)
+  8083 → face_server.py  (얼굴 감지)
+  8000 → face_main.py    (MediaPipe 분석)
+  3000 → http.server     (프론트엔드)
+
+[클라우드 연동 - AWS]
+  GET  /cist/questions  → CIST 문항 수신
+  POST /cist/submit     → 검사 결과 전송 (예정)
+  POST /api/reservation → 치매센터 예약
+```
 ---
 
 ## 🖥️ 하드웨어 사양
 
+```
 | 항목 | 사양 |
 |---|---|
 | 보드 | Raspberry Pi 5 |
@@ -33,8 +77,11 @@
 | RAM | 8GB SDRAM |
 | 스토리지 | Micro SD 128GB |
 | 오디오 출력 | Asul RPI Voice HAT (WM8960, card 2) |
-| 마이크 입력 | USB PnP Sound Device (card 3, 44100Hz) |
-| 접속 방식 | SSH Headless |
+| 마이크 입력 | wm8960 HAT 내장 MEMS 마이크 (DEVICE_INDEX=1) |
+| 블루투스 스피커 | JBL Pulse 2 (A2DP) |
+| 모니터 | 15.6인치 터치 모니터 (HDMI) |
+| 카메라 | WEKIT 광각 카메라 모듈 (imx219, CSI) |
+```
 
 ---
 
@@ -42,23 +89,61 @@
 
 ```
 ~/kiosk_project/
-|-- kiosk_main.py          # 메인 실행 파일 (STT+LLM+TTS 통합)
-|-- kiosk_main_backup.py   # 이전 버전 백업
-|-- cist_runner.py         # CIST 설문 진행 메인 로직 (신규)
-|-- cist_questions.json    # CIST 문항 로컬 데이터 (신규)
+|-- kiosk_main.py            # 메인 실행 파일 (STT+LLM+TTS 통합)
+|-- cist_runner.py           # CIST 설문 진행 메인 로직
+|-- cist_questions.json      # CIST 문항 로컬 데이터
+|-- face_detector.py         # OpenCV 얼굴 감지 모듈
+|-- face_server.py           # 얼굴 인식 HTTP 서버 (port 8083)
+|-- start_kiosk.sh           # 통합 실행 스크립트
+|-- requirements.txt
 |-- README.md
 |-- .gitignore
-|-- llama.cpp/             # LLM 엔진 (CMake 빌드)
+|-- llama.cpp/               # LLM 엔진 (CMake 빌드)
 |   |-- build/bin/
-|   |   |-- llama-server   # 백그라운드 LLM 서버 (port 8080)
+|   |   |-- llama-server     # 백그라운드 LLM 서버 (port 8080)
 |   |-- models/qwen/
 |       |-- qwen2.5-3b-instruct-q4_k_m.gguf  # .gitignore 제외
 |-- stt_engine/
-|   |-- stt_server.py      # Whisper 백그라운드 서버 (port 8081)
-|   |-- stt.py             # STT HTTP 클라이언트
+|   |-- stt_server.py        # Whisper 백그라운드 서버 (port 8081)
+|   |-- stt.py               # STT HTTP 클라이언트
 |-- tts_engine/
-    |-- tts.py             # edge-tts 음성 출력
+|   |-- tts_server.py        # edge-tts TTS 서버 (port 8082)
+|   |-- tts.py               # TTS 직접 호출 모듈
+|-- front_page/              # 프론트엔드 (front 브랜치 클론)
+    |-- start.html           # 시작 화면
+    |-- index.html           # CIST 설문 화면
+    |-- face_main.py         # MediaPipe 얼굴 분석 서버 (port 8000)
+    |-- face_landmarker.task # MediaPipe 모델 파일
 ```
+
+---
+
+## 🙋 나의 역할 및 핵심 기여
+
+### 담당 파트: 임베디드 AI 파이프라인 (Raspberry Pi 5)
+
+- **라즈베리파이 제어:**
+  - 온디바이스 STT-LLM-TTS 파이프라인 구축 (Whisper + Qwen2.5-3B + edge-tts)
+  - Whisper STT 백그라운드 서버 분리로 실행 속도 개선 (30~60초 → 2~3초)
+  - CIST 설문 음성 진행 로직 구현 (문항별 TTS 출력 + VAD STT + LLM 힌트)
+  - 시작 화면 구현 (start.html) 및 Chromium 키오스크 모드 연동
+  - MediaPipe 얼굴 분석 서버 RPi5 포팅 (rpicam-vid 스트리밍 방식)
+  - OpenCV Haar Cascade 얼굴 감지 모듈 구현
+
+- **통신 및 데이터 처리:**
+  - llama-server / STT 서버 / TTS 서버 HTTP API 로컬 통신
+  - 백엔드 EC2 GET /cist/questions 문항 수신 (연동 예정)
+  - CORS 설정으로 Chromium ↔ 로컬 서버 통신
+
+- 📌 **내가 작성한 주요 코드 파일:**
+  - `kiosk_main.py` — 메인 실행 파일
+  - `cist_runner.py` — CIST 설문 진행 로직
+  - `stt_engine/stt_server.py` — Whisper 백그라운드 서버
+  - `tts_engine/tts_server.py` — TTS HTTP 서버
+  - `face_detector.py` — OpenCV 얼굴 감지
+  - `face_server.py` — 얼굴 인식 HTTP 서버
+  - `front_page/start.html` — 시작 화면
+  - `front_page/face_main.py` — MediaPipe 얼굴 분석 (RPi5 포팅)
 
 ---
 
@@ -68,7 +153,6 @@
 - llama.cpp CMake 빌드 완료
 - Qwen2.5-3B-Instruct-Q4_K_M 모델 구동 확인
 - llama-server 백그라운드 아키텍처 확정
-- TTFT/TPS 성능 측정 (TTFT 7~8초, TPS 5.8 t/s)
 - 다국어 환각(Hallucination) 방지 로직 구현
 
 ### ~ 2026.04.13
@@ -76,57 +160,108 @@
 - STT 엔진 구현 (Whisper small, 48000Hz→16000Hz 다운샘플링)
 - TTS 엔진 구현 (edge-tts ko-KR-SunHiNeural)
 - STT → LLM → TTS 전체 파이프라인 통합 완료
-- LLM 응답 시간 2~4초 확인
 
 ### ~ 2026.04.18
 - STT 서버 분리 (Whisper Flask 서버, port 8081)
-- 실행 속도 개선: 30\~60초 → 2\~3초
-- USB 마이크 추가 연결 (card 3, 44100Hz)
-- ALSA 입출력 분리 (.asoundrc)
-  - 입력: USB 마이크 (hw:3,0)
-  - 출력: wm8960 HAT (hw:2,0)
-- scipy.signal.resample로 44100→16000Hz 정확 변환
+- 실행 속도 개선 (30~60초 → 2~3초)
+- ALSA 입출력 분리 설정
+- scipy.signal.resample로 정확한 리샘플링
 
-### ~ 2026.04.20
-- HAT 마이크 .asoundrc 충돌 해결 및 인식률 복구
-- CIST JSON API 구조 분석 (19문항, 6영역, 30점)
-- cist_runner.py 구현 (TTS+STT+LLM 힌트 통합)
-  - 문항 타입별 처리 (음성/그림/기억등록/유창성)
-  - 백엔드 실패 시 로컬 JSON 폴백
-  - 모르겠다 감지 → LLM 힌트 제공
+### ~ 2026.04.27
+- VAD 적용 (말 감지 → 4초 침묵 → 자동 종료)
+- CIST 문항별 처리 분리 (5가지 타입)
+- JBL 블루투스 스피커 연결
+
+### ~ 2026.05.10
+- TTS 서버 구현 (port 8082, CORS 적용)
+- 시작 화면 구현 (start.html)
+- TTS 완료 후 STT 자동 시작 연계
+- TTS 첫 글자 짤림 방지 (무음 패딩 0.3초)
+- 로컬 HTTP 서버 방식으로 전환 (python3 -m http.server 3000)
+
+### ~ 2026.05.23
+- RPi Camera Module (imx219) 연결 및 인식 성공
+- OpenCV Haar Cascade 얼굴 감지 구현
+- MediaPipe 0.10.9 설치 성공 (pyenv Python 3.11.9)
+- face_main.py RPi5 포팅 (rpicam-vid MJPEG 스트리밍)
+- 얼굴 분석 서버 동작 확인 (표정 변화 점수, 무표정 감지)
+
 ---
 
 ## 🐛 트러블슈팅
 
-### 문제 1 — make -j4 빌드 실패
-- **원인**: llama.cpp가 CMake 방식으로 전환
-- **해결**: `cmake -B build && cmake --build build --config Release -j4`
+### ✅ 해결된 문제
 
-### 문제 2 — 다국어 환각(Hallucination)
-- **원인**: Qwen 중국어 기반 모델 → 컨텍스트 길어지면 중국어 회귀
-- **해결**: 시스템 프롬프트 이중 강화 + temperature=0.3 + 한글 감지 안전장치
+**문제 1 — make -j4 빌드 실패**
+- 원인: llama.cpp가 CMake 방식으로 전환
+- 해결: `cmake -B build && cmake --build build --config Release -j4`
 
-### 문제 3 — PaErrorCode -9997 (Invalid sample rate)
-- **원인**: WM8960(48000Hz) vs Whisper(16000Hz) 불일치
-- **해결**: [::3] 다운샘플링 → scipy.signal.resample로 정확 변환
+**문제 2 — 다국어 환각(Hallucination)**
+- 원인: Qwen 중국어 기반 모델 → 컨텍스트 길어지면 중국어 회귀
+- 해결: 시스템 프롬프트 이중 강화(EN+KR) + temperature=0.3 + 한글 감지 안전장치 + 히스토리 12개 제한
 
-### 문제 4 — Device or resource busy (장치 충돌)
-- **원인**: STT(USB 마이크)와 TTS(wm8960)가 ALSA default 장치 충돌
-- **해결**: ~/.asoundrc에서 입출력 장치 명시적 분리
+**문제 3 — PaErrorCode -9997 (Invalid sample rate)**
+- 원인: WM8960 HAT(48000Hz) vs Whisper 요구(16000Hz) 불일치
+- 해결: scipy.signal.resample로 48000→16000Hz 정확 변환
 
-### ⚠️ Known Issue — 공공장소 소음 수음
-- **원인**: USB 마이크 무지향성 + 쿨링팬 소음 + 주변 환경 소음
-- **해결 예정**: VAD(webrtcvad) 적용으로 음성 구간만 STT 처리
+**문제 4 — Device or resource busy (장치 충돌)**
+- 원인: STT(마이크)와 TTS(스피커)가 ALSA default 장치 충돌
+- 해결: ~/.asoundrc에서 입출력 장치 명시적 분리
+
+**문제 5 — TTS 첫 글자 짤림**
+- 원인: mpg123 오디오 버퍼 초기화 지연 (0.2~0.3초)
+- 해결: ffmpeg으로 0.3초 무음 패딩을 TTS 파일 앞에 추가
+
+**문제 6 — Chromium CORS 차단**
+- 원인: 브라우저가 localhost Flask 서버 요청을 cross-origin으로 차단
+- 해결: flask-cors 설치 후 CORS(app) 적용, host=0.0.0.0으로 변경
+
+**문제 7 — RPi Camera 인식 실패**
+- 원인: config.txt에 dtoverlay=imx708 설정이 있었으나 실제 센서는 imx219
+- 해결: dtoverlay=imx219로 교체 후 인식 성공
+
+**문제 8 — mediapipe-rpi4 Python 버전 호환 불가**
+- 원인: mediapipe-rpi4는 Python 3.9용, 시스템은 Python 3.13
+- 해결: pyenv로 Python 3.11.9 설치 → mediapipe 0.10.9 공식 버전 설치 성공
+
+**문제 9 — face_main.py cv2.VideoCapture RPi 카메라 인식 불가**
+- 원인: RPi 카메라는 V4L2 직접 접근 불가, libcamera 방식 필요
+- 해결: rpicam-vid MJPEG 스트리밍을 subprocess로 실행 후 JPEG 파싱하여 OpenCV 프레임으로 변환
+
+### ⚠️ 미해결 문제
+- 공공장소 주변 소음 수음 → VAD 정확도 개선 필요
+- 백엔드 EC2 연동 미완료
 
 ---
 
 ## 🚀 실행 방법
 
+### 사전 준비 (공통)
+
+```bash
+# 블루투스 스피커 연결
+bluetoothctl
+connect [블루투스_MAC_주소]
+exit
+
+# 오디오 출력 설정
+pactl set-default-sink bluez_output.[MAC주소_언더바].1
+```
+
+### 통합 실행 (추천)
+
+```bash
+cd ~/kiosk_project
+./start_kiosk.sh
+```
+
+### 개별 실행
+
 ```bash
 # 1. 가상환경 활성화
 source ~/kiosk_env/bin/activate
 
-# 2. LLM 서버 실행 (터미널 1)
+# 2. LLM 서버 (터미널 1)
 cd ~/kiosk_project/llama.cpp
 ./build/bin/llama-server \
   -m models/qwen/qwen2.5-3b-instruct-q4_k_m.gguf \
@@ -134,30 +269,92 @@ cd ~/kiosk_project/llama.cpp
   --host 127.0.0.1 --port 8080 \
   --log-disable &
 
-# 3. STT 서버 실행 (터미널 2)
+# 3. STT 서버 (터미널 2)
 python ~/kiosk_project/stt_engine/stt_server.py
 
-# 4. 메인 실행 (터미널 3)
+# 4. TTS 서버 (터미널 3)
+python ~/kiosk_project/tts_engine/tts_server.py
+
+# 5. 얼굴 분석 서버 (터미널 4)
+source ~/face_env/bin/activate
+cd ~/kiosk_project/front_page
+python face_main.py
+
+# 6. 프론트 로컬 서버 (터미널 5)
+cd ~/kiosk_project/front_page
+python3 -m http.server 3000
+
+# 7. Chromium 실행 (모니터에서)
+DISPLAY=:0 chromium --kiosk http://localhost:3000/start.html
+```
+
+### CIST 음성 모드 실행
+
+```bash
+source ~/kiosk_env/bin/activate
 cd ~/kiosk_project
-python kiosk_main.py voice
+python cist_runner.py
+```
+
+---
+
+## 🔧 의존성
+
+### 시스템 패키지
+
+```bash
+sudo apt install -y portaudio19-dev python3-pyaudio ffmpeg mpg123 \
+  chromium libcamera-apps i2c-tools bluetooth bluez \
+  pulseaudio pulseaudio-module-bluetooth
+```
+
+### Python 패키지 (kiosk_env — Python 3.13)
+
+```bash
+pip install -r requirements.txt
+# 핵심: openai-whisper sounddevice numpy scipy pyaudio
+#       requests edge-tts flask flask-cors opencv-python-headless
+```
+
+### Python 패키지 (face_env — Python 3.11.9)
+
+```bash
+source ~/face_env/bin/activate
+pip install mediapipe==0.10.9 fastapi uvicorn \
+  opencv-python-headless numpy websockets
+```
+
+### Linux (Raspberry Pi OS)
+
+```bash
+# pyenv 설치 (Python 3.11.9용)
+curl https://pyenv.run | bash
+pyenv install 3.11.9
+python3.11 -m venv ~/face_env
+```
+
+### Windows
+
+```bash
+# PowerShell
+python -m venv venv
+venv\Scripts\activate
+pip install mediapipe fastapi uvicorn opencv-python numpy websockets
+```
+
+### macOS
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install mediapipe fastapi uvicorn opencv-python numpy websockets
 ```
 
 ---
 
 ## 🔜 다음 작업 예정
 
-- [ ] VAD 적용 (webrtcvad) — 소음 환경 음성 감지
-- [ ] EC2 주소 확정 후 POST /cist/submit 백엔드 연동
-- [ ] 그림 문항 화면 표시 (터치스크린 연동)
-- [ ] 전체 CIST 파이프라인 실제 동작 테스트
-
----
-
-## 🔧 의존성
-```bash
-# 시스템 패키지
-sudo apt install -y portaudio19-dev python3-pyaudio ffmpeg mpg123
-
-# Python 패키지
-pip install openai-whisper sounddevice numpy pyaudio requests edge-tts
-```
+- [ ] 백엔드 EC2 주소 확정 후 POST /cist/submit 연동
+- [ ] face_main.py 결과를 백엔드로 전송
+- [ ] 터치 이벤트로 엔터 대기 교체
+- [ ] VAD 정확도 개선 (주변 소음 환경)
