@@ -211,6 +211,9 @@ CIST(인지선별검사)를 음성으로 진행할 수 있도록 돕는 시스�
   - initial_prompt로 인식률 개선
 - Chromium keyring 팝업 제거
 - 백엔드 EC2 연동 완료 (http://3.35.210.123:8000)
+- face_main.py RPi5 카메라 스레드 재적용 (rpicam-vid 방식)
+  - 팀원 코드 업데이트 후 cv2.VideoCapture 방식으로 덮어씌워진 것 복구
+  - camera_thread + frame_lock 방식으로 재포팅
 
 ---
 
@@ -269,6 +272,10 @@ CIST(인지선별검사)를 음성으로 진행할 수 있도록 돕는 시스�
 **문제 13 — STT 숫자 환각 (5 5 5 5... 무한 반복)**
 - 원인: initial_prompt에 숫자 힌트 넣었더니 Whisper가 힌트를 그대로 반복
 - 해결: initial_prompt에서 숫자 제거, 고정 단어(칫솔/그네/주사위 등)만 유지
+
+- **문제 14 — face_main.py git pull 후 카메라 블랙 스크린**
+- 원인: front 브랜치 업데이트로 camera_thread 코드가 cv2.VideoCapture(0)으로 덮어씌워짐
+- 해결: rpicam-vid subprocess + frame_lock 방식 재적용
 
 ---
 
