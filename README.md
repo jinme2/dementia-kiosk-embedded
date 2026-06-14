@@ -13,7 +13,20 @@ CIST(인지선별검사)를 음성으로 진행할 수 있도록 돕는 시스�
 검사 결과는 AWS 백엔드로 전송 후 치매안심센터 예약까지 연결된다.
 
 ---
+## 📅 개발 기간
 
+| 기간 | 내용 |
+|---|---|
+| 2026.03 | 프로젝트 기획 및 하드웨어 구성 확정 |
+| 2026.04.09 | llama.cpp 빌드 및 LLM 온디바이스 구동 |
+| 2026.04.13 | STT-LLM-TTS 전체 파이프라인 통합 |
+| 2026.04.18 | STT 서버 분리 및 USB 마이크 설정 |
+| 2026.04.27 | VAD 적용 및 CIST 문항별 처리 분리 |
+| 2026.05.10 | TTS 서버 구현 및 Chromium 키오스크 연동 |
+| 2026.05.23 | RPi Camera Module 연결 및 MediaPipe 포팅 |
+| 2026.06.14 | 프론트엔드 통합 및 STT 후처리 구현 |
+
+---
 ## 🏗️ 시스템 아키텍처
 
 ### 음성 AI 파이프라인
@@ -186,6 +199,19 @@ CIST(인지선별검사)를 음성으로 진행할 수 있도록 돕는 시스�
 - face_main.py RPi5 포팅 (rpicam-vid MJPEG 스트리밍)
 - 얼굴 분석 서버 동작 확인 (표정 변화 점수, 무표정 감지)
 
+### ~ 2026.06.14
+- launch_kiosk.py 통합 런처 적용 (face_env/kiosk_env 자동 전환)
+- TTS 서버 launch_kiosk.py 연동 (port 8082)
+- index.html TTS 자동 재생 + STT 자동 시작 연동
+- Q3 기억등록 지시문 화면 숨김 처리
+- 처음부터 다시하기 버튼 TTS 연동
+- STT 후처리(postprocess) 구현
+  - 연도/월/일/요일 한글→숫자 보정
+  - 유사 발음 보정 (칫솔, 그네, 주사위, 산강수금)
+  - initial_prompt로 인식률 개선
+- Chromium keyring 팝업 제거
+- 백엔드 EC2 연동 완료 (http://3.35.210.123:8000)
+
 ---
 
 ## 🐛 트러블슈팅
@@ -228,9 +254,21 @@ CIST(인지선별검사)를 음성으로 진행할 수 있도록 돕는 시스�
 - 원인: RPi 카메라는 V4L2 직접 접근 불가, libcamera 방식 필요
 - 해결: rpicam-vid MJPEG 스트리밍을 subprocess로 실행 후 JPEG 파싱하여 OpenCV 프레임으로 변환
 
-### ⚠️ 미해결 문제
-- 공공장소 주변 소음 수음 → VAD 정확도 개선 필요
-- 백엔드 EC2 연동 미완료
+**문제 10 — launch_kiosk.py face_main.py mediapipe 오류**
+- 원인: launch_kiosk.py가 kiosk_env(Python 3.13)로 face_main.py 실행
+- 해결: face_main.py 실행 시 /home/pi/face_env/bin/python 명시적 지정
+
+**문제 11 — TTS 서버 launch_kiosk.py에서 실행 안 됨**
+- 원인: tts_server.py가 front_page/tts_engine/에 없고 kiosk_project/tts_engine/에 있음
+- 해결: 절대 경로 /home/pi/kiosk_project/tts_engine/tts_server.py로 지정
+
+**문제 12 — Chromium keyring 팝업**
+- 원인: Chromium이 비밀번호 저장을 위해 GNOME Keyring 접근 시도
+- 해결: --password-store=basic --use-mock-keychain 옵션 추가
+
+**문제 13 — STT 숫자 환각 (5 5 5 5... 무한 반복)**
+- 원인: initial_prompt에 숫자 힌트 넣었더니 Whisper가 힌트를 그대로 반복
+- 해결: initial_prompt에서 숫자 제거, 고정 단어(칫솔/그네/주사위 등)만 유지
 
 ---
 
@@ -249,10 +287,10 @@ pactl set-default-sink bluez_output.[MAC주소_언더바].1
 ```
 
 ### 통합 실행 (추천)
-
 ```bash
-cd ~/kiosk_project
-./start_kiosk.sh
+cd ~/kiosk_project/front_page
+source ~/kiosk_env/bin/activate
+DISPLAY=:0 python launch_kiosk.py --no-backend
 ```
 
 ### 개별 실행
@@ -353,8 +391,6 @@ pip install mediapipe fastapi uvicorn opencv-python numpy websockets
 ---
 
 ## 🔜 다음 작업 예정
-
-- [ ] 백엔드 EC2 주소 확정 후 POST /cist/submit 연동
 - [ ] face_main.py 결과를 백엔드로 전송
-- [ ] 터치 이벤트로 엔터 대기 교체
 - [ ] VAD 정확도 개선 (주변 소음 환경)
+- [ ] STT 인식률 개선 (마이크 위치 최적화)
