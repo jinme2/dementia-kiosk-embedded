@@ -6,12 +6,14 @@ import sounddevice as sd
 import numpy as np
 import scipy.signal as signal
 import tempfile, wave, os
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 
 HW_SAMPLE_RATE = 48000
 WHISPER_RATE   = 16000
-DEVICE_INDEX   = 0
+DEVICE_INDEX   = 1
 # USB 마이크    HW_SAMPLE_RATE = 44100, DEVICE_INDEX   = 1
 
 print("[STT Server] faster-whisper 'small' 모델 로딩 중...", flush=True)
@@ -199,4 +201,4 @@ def health():
 
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=8081, debug=False)
+    app.run(host="0.0.0.0", port=8081, debug=False)
